@@ -30,5 +30,6 @@ jobs:
 
          - name: Run vcpkg release builder
            run: git fetch -avt &&
+                cp vcpkg.json ./vcpkg/ports/dpp/vcpkg.json
                 cd buildtools &&
                 php make_vcpkg.php "${{ github.repository_owner }}" "${{ secrets.PERSONAL_ACCESS_TOKEN }}"

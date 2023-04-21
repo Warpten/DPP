@@ -550,7 +550,7 @@ namespace dpp {
 		}
 
 		void set_thread_name(const std::string& name) {
-			#ifdef HAVE_PRCTL
+#ifdef HAVE_PRCTL
 				prctl(PR_SET_NAME, reinterpret_cast<unsigned long>(name.substr(0, 15).c_str()), NULL, NULL, NULL);
 			#else
 				#if HAVE_PTHREAD_SETNAME_NP

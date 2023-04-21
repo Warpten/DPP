@@ -1,4 +1,5 @@
 include(GNUInstallDirs)
+
 set(DPP_EXPORT_NAME dpp)
 set(DPP_CMAKE_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/${DPP_EXPORT_NAME})
 set(DPP_VERSION_FILE ${PROJECT_BINARY_DIR}/${DPP_EXPORT_NAME}-config-version.cmake)
@@ -8,7 +9,6 @@ set(DPP_VERSIONED ${DPP_EXPORT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_
 set(DPP_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${DPP_VERSIONED})
 set(DPP_INSTALL_LIBRARY_DIR ${CMAKE_INSTALL_LIBDIR}/${DPP_VERSIONED})
 
-
 ## Pack the binary output
 if (WIN32)
 	install(TARGETS dpp
@@ -16,15 +16,17 @@ if (WIN32)
 		LIBRARY DESTINATION  ${DPP_INSTALL_LIBRARY_DIR}
 		ARCHIVE DESTINATION  ${DPP_INSTALL_LIBRARY_DIR}
 		RUNTIME DESTINATION  ${CMAKE_INSTALL_BINDIR}
-		INCLUDES DESTINATION ${DPP_INSTALL_INCLUDE_DIR})
-	install(DIRECTORY "${DPP_ROOT_PATH}/include/" DESTINATION "${DPP_INSTALL_INCLUDE_DIR}")
+		INCLUDES DESTINATION ${DPP_INSTALL_INCLUDE_DIR}
+	)
+	install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/" DESTINATION "${DPP_INSTALL_INCLUDE_DIR}")
 else()
 	install(TARGETS dpp
 		EXPORT ${DPP_EXPORT_NAME}
 		LIBRARY DESTINATION  ${CMAKE_INSTALL_LIBRARY_DIR}
 		ARCHIVE DESTINATION  ${CMAKE_INSTALL_LIBRARY_DIR}
 		RUNTIME DESTINATION  ${CMAKE_INSTALL_BINDIR}
-		INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDE_DIR})
+		INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDE_DIR}
+	)
 endif()
 
 ## Allow for a specific version to be chosen in the `find_package` command
@@ -34,7 +36,7 @@ write_basic_package_version_file(${DPP_VERSION_FILE}
 		COMPATIBILITY SameMajorVersion)
 
 ## Include the file which allows `find_package(dpp)` to function.
-install(FILES "${DPP_ROOT_PATH}/cmake/dpp-config.cmake" "${DPP_VERSION_FILE}" DESTINATION "${DPP_CMAKE_DIR}")
+install(FILES "${PROJECT_SOURCE_DIR}/cmake/dpp-config.cmake" "${DPP_VERSION_FILE}" DESTINATION "${DPP_CMAKE_DIR}")
 
 ## Export the targets to allow other projects to easily include this project
 install(EXPORT "${DPP_EXPORT_NAME}" DESTINATION "${DPP_CMAKE_DIR}" NAMESPACE dpp::)
@@ -57,10 +59,10 @@ set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
 set(CPACK_DEBIAN_PACKAGE_SECTION "libs")
 
 ## Select generated based on what operating system
-if(WIN32)
+if (WIN32)
 	set(CPACK_GENERATOR ZIP)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	set(CPACK_GENERATOR "DEB;RPM")
-else()
+else ()
 	set(CPACK_GENERATOR "TBZ2")
-endif()
+endif ()

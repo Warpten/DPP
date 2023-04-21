@@ -21,14 +21,13 @@ on:
       - '**ci.yml'
       - '**CMakeLists.txt'
 
-
 jobs:
   linux-with-unit-test:
     concurrency: 
       group: linux-build-unit-test
       cancel-in-progress: false
-    name: Linux ${{matrix.cfg.arch}} (${{matrix.cfg.cpp-version}})
-    runs-on: ${{matrix.cfg.os}}
+    name: Linux ${{ matrix.cfg.arch }} (${{ matrix.cfg.cpp-version }})
+    runs-on: ${{ matrix.cfg.os }}
     strategy:
       fail-fast: false # Don't fail everything if one fails. We want to test each OS/Compiler individually
       matrix:
@@ -40,12 +39,12 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install apt packages
-        run: sudo sed -i 's/azure\.//' /etc/apt/sources.list && sudo apt update && sudo apt install  ${{ matrix.cfg.cpp-version }} ninja-build libsodium-dev libopus-dev zlib1g-dev rpm
+        run: sudo sed -i 's/azure\.//' /etc/apt/sources.list && sudo apt update && sudo apt install ${{ matrix.cfg.cpp-version }} ninja-build libsodium-dev libopus-dev zlib1g-dev rpm
 
       - name: Generate CMake
-        run: mkdir build && cd build && cmake -G Ninja -DDPP_NO_VCPKG=ON -DCMAKE_BUILD_TYPE=Release ..
+        run: mkdir build && cd build && cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
         env:
-          CXX: ${{matrix.cfg.cpp-version}}
+          CXX: ${{ matrix.cfg.cpp-version }}
 
       - name: Build Project
         run: cd build && ninja 
@@ -53,23 +52,23 @@ jobs:
       - name: Run unit tests
         run: cd build/library && ./unittest
         env:
-          DPP_UNIT_TEST_TOKEN: ${{secrets.DPP_UNIT_TEST_TOKEN}}
-          TEST_GUILD_ID: ${{secrets.TEST_GUILD_ID}}
-          TEST_TEXT_CHANNEL_ID: ${{secrets.TEST_TEXT_CHANNEL_ID}}
-          TEST_VC_ID: ${{secrets.TEST_VC_ID}}
-          TEST_USER_ID: ${{secrets.TEST_USER_ID}}
-          TEST_EVENT_ID: ${{secrets.TEST_EVENT_ID}}
+          DPP_UNIT_TEST_TOKEN: ${{ secrets.DPP_UNIT_TEST_TOKEN }}
+          TEST_GUILD_ID: ${{ secrets.TEST_GUILD_ID }}
+          TEST_TEXT_CHANNEL_ID: ${{ secrets.TEST_TEXT_CHANNEL_ID }}
+          TEST_VC_ID: ${{ secrets.TEST_VC_ID }}
+          TEST_USER_ID: ${{ secrets.TEST_USER_ID }}
+          TEST_EVENT_ID: ${{ secrets.TEST_EVENT_ID }}
 
   linux-no-unit-tests:
-    name: Linux ${{matrix.cfg.arch}} (${{matrix.cfg.cpp-version}})
-    runs-on: ${{matrix.cfg.os}}
+    name: Linux ${{ matrix.cfg.arch }} (${{ matrix.cfg.cpp-version }})
+    runs-on: ${{ matrix.cfg.os }}
     strategy:
       fail-fast: false # Don't fail everything if one fails. We want to test each OS/Compiler individually
       matrix:
         cfg:
-          - { arch: 'amd64', os: ubuntu-22.04, cpp-version: g++-11 }
-          - { arch: 'amd64', os: ubuntu-22.04, cpp-version: g++-10 }
-          - { arch: 'amd64', os: ubuntu-20.04, cpp-version: g++-9 }
+          - { arch: 'amd64', os: 'ubuntu-22.04', cpp-version: 'g++-11', vcpkg: '/usr/local/share/vcpkg', vcpkg-cache: '/usr/local/share/vcpkg/binary-cache'  }
+          - { arch: 'amd64', os: 'ubuntu-22.04', cpp-version: 'g++-10', vcpkg: '/usr/local/share/vcpkg', vcpkg-cache: '/usr/local/share/vcpkg/binary-cache'  }
+          - { arch: 'amd64', os: 'ubuntu-20.04', cpp-version: 'g++-9' , vcpkg: '/usr/local/share/vcpkg', vcpkg-cache: '/usr/local/share/vcpkg/binary-cache'  }
 
     steps:
       - name: Checkout D++
@@ -78,10 +77,32 @@ jobs:
       - name: Install apt packages
         run: sudo sed -i 's/azure\.//' /etc/apt/sources.list && sudo apt update && sudo apt install  ${{ matrix.cfg.cpp-version }} ninja-build libsodium-dev libopus-dev zlib1g-dev rpm
 
+      - name: "Initialize vcpkg cache"
+        run: |
+          mkdir ${{ matrix.cfg.vcpkg-cache }}
+          echo "VCPKG_DEFAULT_BINARY_CACHE=${{ matrix.cfg.vcpkg-cache }}" >> $GITHUB_ENV
+        shell: bash
+
+      # Restore both vcpkg and its artifacts from the GitHub cache service.
+      - name: Restore vcpkg and its artifacts.
+        uses: actions/cache@v3
+        with:
+            # The first path is the location of vcpkg: it contains the vcpkg executable and data files, as long as the
+            # built package archives (aka binary cache) which are located by VCPKG_DEFAULT_BINARY_CACHE env var.
+            # The other paths starting with '!' are exclusions: they contain termporary files generated during the build of the installed packages.
+            # Note that we do not cache the .git directory of the vcpkg installation; we however use it to tag the cache.
+            path: |
+                ${{ matrix.cfg.vcpkg-cache }}
+            # The key is composed in a way that it gets properly invalidated: this must happen whenever vcpkg's Git commit id changes, or the list of packages changes. In this case a cache miss must happen and a new entry with a new key with be pushed to GitHub the cache service.
+            # The key includes: hash of the vcpkg.json file, the hash of the vcpkg Git commit id, and the used vcpkg's triplet. The vcpkg's commit id would suffice, but computing an hash out of it does not harm.
+            # Note: given a key, the cache content is immutable. If a cache entry has been created improperly, in order the recreate the right content the key must be changed as well, and it must be brand new (i.e. not existing already).
+            key: |
+                ${{ hashFiles( 'vcpkg.json' ) }}-${{ hashFiles( format('{0}/.git/HEAD', matrix.cfg.vcpkg )) }}-${{ matrix.cfg.arch }}-${{ matrix.cfg.os }}-${{ matrix.cfg.cpp-version }}
+
       - name: Generate CMake
-        run: mkdir build && cd build && cmake -G Ninja -DDPP_NO_VCPKG=ON -DCMAKE_BUILD_TYPE=Release ..
+        run: mkdir build && cd build && cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="${{ matrix.cfg.vcpkg }}/scripts/buildsystems/vcpkg.cmake" ..
         env:
-          CXX: ${{matrix.cfg.cpp-version}}
+          CXX: ${{ matrix.cfg.cpp-version }}
 
       - name: Build Project
         run: cd build && ninja 
@@ -94,15 +115,15 @@ jobs:
         if: ${{ matrix.cfg.cpp-version == 'g++-10' }}
         uses: actions/upload-artifact@v2
         with:
-          name: "libdpp - Debian Package ${{matrix.cfg.arch}}"
-          path: '${{github.workspace}}/build/*.deb'
+          name: "libdpp - Debian Package ${{ matrix.cfg.arch }}"
+          path: '${{ github.workspace }}/build/*.deb'
 
       - name: Upload Binary (RPM)
         if: ${{ matrix.cfg.cpp-version == 'g++-10' }}
         uses: actions/upload-artifact@v2
         with:
-          name: "libdpp - RPM Package ${{matrix.cfg.arch}}"
-          path: '${{github.workspace}}/build/*.rpm'
+          name: "libdpp - RPM Package ${{ matrix.cfg.arch }}"
+          path: '${{ github.workspace }}/build/*.rpm'
 
   macos:
     name: macOS x64
@@ -115,31 +136,27 @@ jobs:
         run: brew install cmake ninja libsodium opus openssl
 
       - name: Generate CMake
-        run: mkdir build && cd build && cmake -DDPP_NO_VCPKG=ON -DCMAKE_BUILD_TYPE=Release -G Ninja ..
-        env:
-          DONT_RUN_VCPKG: true
+        run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -G Ninja ..
 
       - name: Build Project
         run: cd build && ninja 
-        env:
-          DONT_RUN_VCPKG: true
 
   windows: # Windows x64 and x86 build matrix
     strategy:
       fail-fast: false # Don't cancel other matrix jobs if one fails
       matrix:
         cfg:
-        - { name: x64,  arch: x64, config: Release, vs: '2019', os: 'windows-2019', vsv: '16' }
-        - { name: x64,  arch: x64, config: Debug, vs: '2019', os: 'windows-2019', vsv: '16' }
-        - { name: x86,  arch: x86, config: Release, vs: '2019', os: 'windows-2019', vsv: '16' }
-        - { name: x86,  arch: x86, config: Debug, vs: '2019', os: 'windows-2019', vsv: '16' }
-        - { name: x64,  arch: x64, config: Release, vs: '2022', os: 'windows-2022', vsv: '17' }
-        - { name: x64,  arch: x64, config: Debug, vs: '2022', os: 'windows-2022', vsv: '17' }
-        - { name: x86,  arch: x86, config: Release, vs: '2022', os: 'windows-2022', vsv: '17' }
-        - { name: x86,  arch: x86, config: Debug, vs: '2022', os: 'windows-2022', vsv: '17' }
+        - { name: x64,  arch: x64, config: Release, vs: '2019', os: 'windows-2019', vsv: '16', vcpkg: 'C:/vcpkg', vcpkg-cache: 'C:/vcpkg/binary-cache' }
+        - { name: x64,  arch: x64, config: Debug,   vs: '2019', os: 'windows-2019', vsv: '16', vcpkg: 'C:/vcpkg', vcpkg-cache: 'C:/vcpkg/binary-cache' }
+        - { name: x86,  arch: x86, config: Release, vs: '2019', os: 'windows-2019', vsv: '16', vcpkg: 'C:/vcpkg', vcpkg-cache: 'C:/vcpkg/binary-cache' }
+        - { name: x86,  arch: x86, config: Debug,   vs: '2019', os: 'windows-2019', vsv: '16', vcpkg: 'C:/vcpkg', vcpkg-cache: 'C:/vcpkg/binary-cache' }
+        - { name: x64,  arch: x64, config: Release, vs: '2022', os: 'windows-2022', vsv: '17', vcpkg: 'C:/vcpkg', vcpkg-cache: 'C:/vcpkg/binary-cache' }
+        - { name: x64,  arch: x64, config: Debug,   vs: '2022', os: 'windows-2022', vsv: '17', vcpkg: 'C:/vcpkg', vcpkg-cache: 'C:/vcpkg/binary-cache' }
+        - { name: x86,  arch: x86, config: Release, vs: '2022', os: 'windows-2022', vsv: '17', vcpkg: 'C:/vcpkg', vcpkg-cache: 'C:/vcpkg/binary-cache' }
+        - { name: x86,  arch: x86, config: Debug,   vs: '2022', os: 'windows-2022', vsv: '17', vcpkg: 'C:/vcpkg', vcpkg-cache: 'C:/vcpkg/binary-cache' }
 
-    name: "Windows ${{matrix.cfg.name}}-${{matrix.cfg.config}}-vs${{matrix.cfg.vs}}"
-    runs-on: ${{matrix.cfg.os}}
+    name: "Windows ${{ matrix.cfg.name }}-${{ matrix.cfg.config }}-vs${{ matrix.cfg.vs }}"
+    runs-on: ${{ matrix.cfg.os }}
     steps:
       - name: Checkout D++
         uses: actions/checkout@v2
@@ -148,26 +165,42 @@ jobs:
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v1.0.2
+        
+      - name: "Initialize vcpkg cache"
+        run: |
+          mkdir ${{ matrix.cfg.vcpkg-cache }}
+          echo "VCPKG_DEFAULT_BINARY_CACHE=${{ matrix.cfg.vcpkg-cache }}" >> $GITHUB_ENV
+        shell: bash
+        
+      # Restore both vcpkg and its artifacts from the GitHub cache service.
+      - name: Restore vcpkg and its artifacts.
+        uses: actions/cache@v3
+        with:
+            # The first path is the location of vcpkg: it contains the vcpkg executable and data files, as long as the
+            # built package archives (aka binary cache) which are located by VCPKG_DEFAULT_BINARY_CACHE env var.
+            # The other paths starting with '!' are exclusions: they contain termporary files generated during the build of the installed packages.
+            # Note that we do not cache the .git directory of the vcpkg installation; we however use it to tag the cache.
+            path: |
+                ${{ matrix.cfg.vcpkg-cache }}
+            # The key is composed in a way that it gets properly invalidated: this must happen whenever vcpkg's Git commit id changes, or the list of packages changes. In this case a cache miss must happen and a new entry with a new key with be pushed to GitHub the cache service.
+            # The key includes: hash of the vcpkg.json file, the hash of the vcpkg Git commit id, and the used vcpkg's triplet. The vcpkg's commit id would suffice, but computing an hash out of it does not harm.
+            # Note: given a key, the cache content is immutable. If a cache entry has been created improperly, in order the recreate the right content the key must be changed as well, and it must be brand new (i.e. not existing already).
+            key: |
+                ${{ hashFiles( 'vcpkg.json' ) }}-${{ hashFiles( format('{0}/.git/HEAD', matrix.cfg.vcpkg )) }}-${{ matrix.cfg.arch }}-${{ matrix.cfg.os }}-${{ matrix.cfg.config }}-${{ matrix.cfg.vs }}
 
-      - name: Install chocolatey packages ${{ matrix.cfg.arch}}
+      - name: Install chocolatey packages ${{ matrix.cfg.arch }}
         uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Generate CMake (x64)
         if: ${{ matrix.cfg.arch == 'x64' }}
-        run: mkdir main/build && cd main/build && cmake -G "Visual Studio ${{matrix.cfg.vsv}} ${{matrix.cfg.vs}}" -DDPP_NO_VCPKG=ON ..
-        env:
-          DONT_RUN_VCPKG: true
+        run: mkdir main/build && cd main/build && cmake -G "Visual Studio ${{ matrix.cfg.vsv }} ${{ matrix.cfg.vs }}" -DCMAKE_TOOLCHAIN_FILE="${{ matrix.cfg.vcpkg }}/scripts/buildsystems/vcpkg.cmake" ..
 
       - name: Generate CMake (x86)
         if: ${{ matrix.cfg.arch == 'x86' }}
-        run: mkdir main/build && cd main/build && cmake -DCMAKE_TOOLCHAIN_FILE="cmake\Win32Toolchain.cmake" -DDPP_NO_VCPKG=ON -G "Visual Studio ${{matrix.cfg.vsv}} ${{matrix.cfg.vs}}" -A Win32 -T host=x86 ..
-        env:
-          DONT_RUN_VCPKG: true
+        run: mkdir main/build && cd main/build && cmake -G "Visual Studio ${{ matrix.cfg.vsv }} ${{ matrix.cfg.vs }}" -DCMAKE_TOOLCHAIN_FILE="${{ matrix.cfg.vcpkg }}/scripts/buildsystems/vcpkg.cmake" -A Win32 -T host=x86 ..
 
       - name: Build Project
-        run: cmake --build main/build --target dpp --config ${{matrix.cfg.config}}
-        env:
-          DONT_RUN_VCPKG: true
+        run: cmake --build main/build --target dpp --config ${{ matrix.cfg.config }}
 
       - name: Move debug files for packaging
         if: ${{ matrix.cfg.config == 'Debug' }}
@@ -175,27 +208,25 @@ jobs:
 
       - name: Package distributable
         run: cd main/build && cpack --verbose
-        env:
-          DONT_RUN_VCPKG: true
 
       - name: Upload Binary
         uses: actions/upload-artifact@v2
         with:
-          name: "libdpp - Windows ${{matrix.cfg.name}}-${{matrix.cfg.config}}-vs${{matrix.cfg.vs}}"
-          path: '${{github.workspace}}/main/build/*.zip'
+          name: "libdpp - Windows ${{ matrix.cfg.name }}-${{ matrix.cfg.config }}-vs${{ matrix.cfg.vs }}"
+          path: '${{ github.workspace }}/main/build/*.zip'
 
   cross-compiles:
     strategy:
       fail-fast: false
       matrix:
         cfg:
-          - {name: "ARM64", os: ubuntu-20.04, cmake-options: -DCMAKE_TOOLCHAIN_FILE=cmake/ARM64ToolChain.cmake}
-          - {name: "ARMv7 HF", os: ubuntu-20.04, cmake-options: -DCMAKE_TOOLCHAIN_FILE=cmake/ARMv7ToolChain.cmake}
-          - {name: "Linux x86", os: ubuntu-22.04, cmake-options: -DCMAKE_TOOLCHAIN_FILE=cmake/LINUXx86ToolChain.cmake}
-          - {name: "ARMv6", os: ubuntu-20.04, cmake-options: -DCMAKE_TOOLCHAIN_FILE=cmake/ARMv6ToolChain.cmake}
+          - { name: "ARM64",     os: ubuntu-20.04, cmake-options: -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake -DDVCPKG_CHAINLOAD_TOOLCHAIN_FILE=cmake/ARM64ToolChain.cmake    }
+          - { name: "ARMv7 HF",  os: ubuntu-20.04, cmake-options: -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake -DDVCPKG_CHAINLOAD_TOOLCHAIN_FILE=cmake/ARMv7ToolChain.cmake    }
+          - { name: "Linux x86", os: ubuntu-22.04, cmake-options: -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake -DDVCPKG_CHAINLOAD_TOOLCHAIN_FILE=cmake/LINUXx86ToolChain.cmake }
+          - { name: "ARMv6",     os: ubuntu-20.04, cmake-options: -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake -DDVCPKG_CHAINLOAD_TOOLCHAIN_FILE=cmake/ARMv6ToolChain.cmake    }
 
-    name: ${{matrix.cfg.name}}
-    runs-on: ${{matrix.cfg.os}}
+    name: ${{ matrix.cfg.name }}
+    runs-on: ${{ matrix.cfg.os }}
     steps:
       - name: Checkout D++
         uses: actions/checkout@v2
@@ -204,7 +235,7 @@ jobs:
         run: sudo sed -i 's/azure\.//' /etc/apt/sources.list && sudo apt update && sudo apt install cmake ninja-build rpm
 
       - name: Generate CMakeFiles
-        run: mkdir build && cd build && sudo cmake ${{matrix.cfg.cmake-options}} -DDPP_NO_VCPKG=ON -DCMAKE_BUILD_TYPE=Release -G Ninja ..
+        run: mkdir build && cd build && sudo cmake ${{ matrix.cfg.cmake-options }} -DCMAKE_BUILD_TYPE=Release -G Ninja ..
 
       - name: Compile Source
         run: cd build && sudo ninja 
@@ -215,38 +246,11 @@ jobs:
       - name: Upload Binaries (DEB)
         uses: actions/upload-artifact@v2
         with:
-          name: "libdpp - Debian Package ${{matrix.cfg.name}}"
-          path: "${{github.workspace}}/build/*.deb"
+          name: "libdpp - Debian Package ${{ matrix.cfg.name }}"
+          path: "${{ github.workspace }}/build/*.deb"
 
       - name: Upload Binaries (RPM)
         uses: actions/upload-artifact@v2
         with:
-          name: "libdpp - RPM Package ${{matrix.cfg.name}}"
-          path: "${{github.workspace}}/build/*.rpm"
-
-#  testfreebsd:
-#   runs-on: macos-10.15
-#   name: FreeBSD (g++-10)
-#   steps:
-#   - uses: actions/checkout@v2
-#   - name: FreeBSD Build and Package
-#     id: freebsdtest
-#     uses: vmactions/freebsd-vm@v0.1.5
-#     with:
-#        usesh: true
-#       prepare: pkg install -y openssl-devel gcc gmake ninja cmake git
-#       run: |
-#         pwd
-#         ls -lah
-#          mkdir build
-#          cd build
-#          cmake ..
-#          make -j2
-#          make install
-#          cpack --verbose
-#
-#    - name: Upload Binaries (BZ2)
-#      uses: actions/upload-artifact@v2
-#      with:
-#        name: "libdpp - FreeBSD x64"
-#        path: "${{github.workspace}}/build/*.tar.bz2"
+          name: "libdpp - RPM Package ${{ matrix.cfg.name }}"
+          path: "${{ github.workspace }}/build/*.rpm"

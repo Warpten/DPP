@@ -173,13 +173,11 @@ file(COPY "${CMAKE_CURRENT_LIST_DIR}/usage" DESTINATION "${CURRENT_PACKAGES_DIR}
   "description": "D++ Extremely Lightweight C++ Discord Library.",
   "homepage": "https://dpp.dev/",
   "license": "Apache-2.0",
-  "supports": "((windows & !static & !uwp) | linux | osx)",
+  "supports": "(windows & !uwp) | linux | osx",
   "dependencies": [
-    "libsodium",
     "nlohmann-json",
     "openssl",
-    "opus",
-    "zlib",
+	"zlib",
     {
       "name": "vcpkg-cmake",
       "host": true
@@ -188,7 +186,19 @@ file(COPY "${CMAKE_CURRENT_LIST_DIR}/usage" DESTINATION "${CURRENT_PACKAGES_DIR}
       "name": "vcpkg-cmake-config",
       "host": true
     }
-  ]
+  ],
+  "features": {
+    "coro": {
+	  "description": "Adds experimental coroutine support to DPP. Requires a C++20 enabled compiler with coroutines support."
+	},
+	"voice": {
+	  "description": "Adds voice support to DPP.",
+	  "dependencies": [
+		"opus",
+		"libsodium"
+	  ]
+	}
+  }
 }';
         echo GREEN . "Writing portfile...\n" . WHITE;
         file_put_contents('./vcpkg/ports/dpp/vcpkg.json', $versionFileContent);
