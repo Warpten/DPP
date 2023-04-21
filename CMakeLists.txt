@@ -38,7 +38,7 @@ option(DPP_USE_EXTERNAL_JSON   "Use an external installation of nlohmann::json" 
 
 # ###################################################################################################################
 # Compute DPP version for CMake manifest
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/include/dpp/version.h" DPP_VERSION_HEADER)
+file(READ "${CMAKE_BINARY_DIR}/include/dpp/version.h" DPP_VERSION_HEADER)
 
 if(NOT DPP_VERSION_HEADER MATCHES "DPP_VERSION_SHORT ([0-9][0-9])([0-9][0-9])([0-9][0-9])")
   message(FATAL_ERROR "Cannot get DPP_VERSION_SHORT from version.h")

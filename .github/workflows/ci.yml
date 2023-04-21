@@ -136,7 +136,7 @@ jobs:
         run: brew install cmake ninja libsodium opus openssl
 
       - name: Generate CMake
-        run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -G Ninja ..
+        run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_OVERLAY_PORTS=${{ github.workspace }}/vcpkg/ci-overlays -G Ninja ..
 
       - name: Build Project
         run: cd build && ninja 
@@ -220,10 +220,10 @@ jobs:
       fail-fast: false
       matrix:
         cfg:
-          - { name: "ARM64",     os: ubuntu-20.04, cmake-options: -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake -DDVCPKG_CHAINLOAD_TOOLCHAIN_FILE=cmake/ARM64ToolChain.cmake    }
-          - { name: "ARMv7 HF",  os: ubuntu-20.04, cmake-options: -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake -DDVCPKG_CHAINLOAD_TOOLCHAIN_FILE=cmake/ARMv7ToolChain.cmake    }
-          - { name: "Linux x86", os: ubuntu-22.04, cmake-options: -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake -DDVCPKG_CHAINLOAD_TOOLCHAIN_FILE=cmake/LINUXx86ToolChain.cmake }
-          - { name: "ARMv6",     os: ubuntu-20.04, cmake-options: -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake -DDVCPKG_CHAINLOAD_TOOLCHAIN_FILE=cmake/ARMv6ToolChain.cmake    }
+          - { name: "ARM64",     os: ubuntu-20.04, cmake-options: '', cmake-toolchain: 'cmake/ARM64ToolChain.cmake'    }
+          - { name: "ARMv7 HF",  os: ubuntu-20.04, cmake-options: '', cmake-toolchain: 'cmake/ARMv7ToolChain.cmake'    }
+          - { name: "Linux x86", os: ubuntu-22.04, cmake-options: '', cmake-toolchain: 'cmake/LINUXx86ToolChain.cmake' }
+          - { name: "ARMv6",     os: ubuntu-20.04, cmake-options: '', cmake-toolchain: 'cmake/ARMv6ToolChain.cmake'    }
 
     name: ${{ matrix.cfg.name }}
     runs-on: ${{ matrix.cfg.os }}
@@ -235,7 +235,7 @@ jobs:
         run: sudo sed -i 's/azure\.//' /etc/apt/sources.list && sudo apt update && sudo apt install cmake ninja-build rpm
 
       - name: Generate CMakeFiles
-        run: mkdir build && cd build && sudo cmake ${{ matrix.cfg.cmake-options }} -DCMAKE_BUILD_TYPE=Release -G Ninja ..
+        run: mkdir build && cd build && sudo cmake -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=${{ github.workspace }}/${{ matrix.cfg.cmake-toolchain }} ${{ matrix.cfg.cmake-options }} -DCMAKE_BUILD_TYPE=Release -G Ninja ..
 
       - name: Compile Source
         run: cd build && sudo ninja 

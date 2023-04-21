@@ -46,7 +46,7 @@ if (WIN32 AND NOT MINGW AND BUILD_SHARED_LIBS)
     message(STATUS "-- Configuring .rc resource script.")
 
     configure_file("${PROJECT_SOURCE_DIR}/src/dpp/dpp.rc.in"
-      "${PROJECT_SOURCE_DIR}/resources/dpp.rc"
+      "${CMAKE_BINARY_DIR}/resources/dpp.rc"
       NEWLINE_STYLE WIN32
     )
 endif ()
@@ -59,7 +59,7 @@ foreach (DPP_FULL_MODULE_NAME ${DPP_SUBDIRECTORY_LIST})
     "${PROJECT_SOURCE_DIR}/src/dpp/*.cpp"
     "${PROJECT_SOURCE_DIR}/src/dpp/events/*.cpp"
     "${PROJECT_SOURCE_DIR}/src/dpp/cluster/*.cpp"
-    "${PROJECT_SOURCE_DIR}/resources/*.rc"
+    "${CMAKE_BINARY_DIR}/resources/*.rc"
   )
 
   # This will be either STATIC or SHARED depending on BUILD_SHARED_LIBS.
@@ -200,7 +200,7 @@ endif ()
 
 set_target_properties(dpp
   PROPERTIES
-    OUTPUT_NAME "dpp"
+    OUTPUT_NAME           "dpp"
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS        OFF
 )
