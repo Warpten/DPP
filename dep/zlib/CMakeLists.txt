@@ -1,4 +1,4 @@
-add_library(dpp_zlib INTERFACE)
+add_library(dpp_zlib INTERFACE IMPORTED)
 
 # Only search if we user tried to build DPP with voice support
 find_package(ZLIB REQUIRED)

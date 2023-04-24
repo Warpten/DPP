@@ -1,5 +1,5 @@
 # Expose a sodium interface. If DPP is built without voice support, this interface will literally do nothing.
-add_library(dpp_sodium INTERFACE)
+add_library(dpp_sodium INTERFACE IMPORTED)
 
 # Only search if we user tried to build DPP with voice support
 if (DPP_BUILD_VOICE_SUPPORT)
