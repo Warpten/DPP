@@ -235,7 +235,7 @@ jobs:
         run: sudo sed -i 's/azure\.//' /etc/apt/sources.list && sudo apt update && sudo apt install cmake ninja-build rpm
 
       - name: Generate CMakeFiles
-        run: mkdir build && cd build && sudo cmake -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=${{ github.workspace }}/${{ matrix.cfg.cmake-toolchain }} ${{ matrix.cfg.cmake-options }} -DCMAKE_BUILD_TYPE=Release -G Ninja ..
+        run: mkdir build && cd build && sudo cmake -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/${{ matrix.cfg.cmake-toolchain }} ${{ matrix.cfg.cmake-options }} -DVCPKG_OVERLAY_PORTS=${{ github.workspace }}/vcpkg/ci-overlays  -DCMAKE_BUILD_TYPE=Release -G Ninja ..
 
       - name: Compile Source
         run: cd build && sudo ninja 
