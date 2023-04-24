@@ -117,6 +117,7 @@ target_compile_features(dpp
 )
 
 # Setup compiler flags.
+# Explicitely not done with generator expressions to maintain readability.
 if (NOT MSVC)
   target_compile_options(dpp
     PRIVATE

@@ -1,5 +1,5 @@
 # Expose an opus interface. If DPP is built without voice support, this interface will literally do nothing.
-add_library(dpp_opus INTERFACE IMPORTED)
+add_library(dpp_opus INTERFACE)
 add_library(dpp::opus ALIAS dpp_opus)
 
 # Only search if we user tried to build DPP with voice support
