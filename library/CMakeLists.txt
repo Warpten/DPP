@@ -33,7 +33,7 @@ find_package(Git QUIET)
 
 # Look for ldconfig on Unix or MSYS if required
 if ((UNIX OR MSYS) AND DPP_RUN_LDCONFIG)
-  # find_package(LDCONFIG_EXECUTABLE "ldconfig")
+  find_program(LDCONFIG_EXECUTABLE "ldconfig")
 endif ()
 
 # ###################################################################################################################
@@ -250,7 +250,7 @@ if (DPP_INSTALL_TARGET)
     
     message(STATUS "-- Library install directory located at ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
     message(STATUS "-- Library include directory located at ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}")
-      elseif (MINGW)
+  elseif (MINGW)
     install(TARGETS dpp LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
     install(DIRECTORY "${PROJECT_SOURCE_DIR}/include" DESTINATION "${CMAKE_INSTALL_PREFIX}/include")
 
