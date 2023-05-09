@@ -100,7 +100,7 @@ jobs:
                 ${{ hashFiles( 'vcpkg.json' ) }}-${{ hashFiles( format('{0}/.git/HEAD', matrix.cfg.vcpkg )) }}-${{ matrix.cfg.arch }}-${{ matrix.cfg.os }}-${{ matrix.cfg.cpp-version }}
 
       - name: Generate CMake
-        run: mkdir build && cd build && cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="${{ matrix.cfg.vcpkg }}/scripts/buildsystems/vcpkg.cmake" ..
+        run: mkdir build && cd build && cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="${{ matrix.cfg.vcpkg }}/scripts/buildsystems/vcpkg.cmake" -DVCPKG_OVERLAY_PORTS=${{ github.workspace }}/vcpkg/ci-overlays ..
         env:
           CXX: ${{ matrix.cfg.cpp-version }}
 
